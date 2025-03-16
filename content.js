@@ -181,11 +181,49 @@ async function extractClaudeChat() {
         const humanMessage = container.querySelector('[data-testid="user-message"]');
         if (humanMessage) {
             console.log('Found human message');
-            messages.push({
-                role: 'human',
-                content: humanMessage.textContent,
-                timestamp: new Date().toISOString()
-            });
+            
+            // Find and click the edit button
+            const editButton = container.querySelector('button[data-state="closed"] svg[viewBox="0 0 256 256"]');
+            if (editButton) {
+                const editButtonElement = editButton.closest('button');
+                editButtonElement.click();
+                
+                // Wait for textarea to appear
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Find the textarea and get its content
+                const textarea = document.querySelector('textarea[data-1p-ignore="true"]');
+                const userContent = textarea ? textarea.value : null;
+                
+                // Find and click the cancel button - more specific selector
+                const cancelButton = Array.from(document.querySelectorAll('button')).find(button => 
+                    button.textContent === 'Cancel' && 
+                    button.getAttribute('type') === 'button' &&
+                    !button.getAttribute('id') &&
+                    !button.getAttribute('data-state')
+                );
+                
+                if (cancelButton) {
+                    cancelButton.click();
+                    
+                    // Wait longer for UI to return to normal
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                } else {
+                    console.error('Cancel button not found');
+                }
+                
+                messages.push({
+                    role: 'human',
+                    content: userContent || humanMessage.innerText,
+                    timestamp: new Date().toISOString()
+                });
+            } else {
+                messages.push({
+                    role: 'human',
+                    content: humanMessage.innerText,
+                    timestamp: new Date().toISOString()
+                });
+            }
         }
 
         // Check for Claude's message
@@ -204,7 +242,7 @@ async function extractClaudeChat() {
                 if (markdownContent) {
                     console.log('Successfully got markdown content, length:', markdownContent.length);
                 } else {
-                    console.log('Failed to get markdown content, falling back to textContent');
+                    console.log('Failed to get markdown content, falling back to innerText');
                 }
             } else {
                 console.log('No copy button found');
@@ -228,7 +266,7 @@ async function extractClaudeChat() {
 
             messages.push({
                 role: 'assistant',
-                content: markdownContent || claudeMessage.textContent,
+                content: markdownContent || claudeMessage.innerText,
                 images: images,
                 codeBlocks: codeBlocks,
                 timestamp: new Date().toISOString()
@@ -355,6 +393,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         overlay.style.padding = '10px 20px';
         overlay.style.borderRadius = '5px';
         overlay.style.zIndex = '10000';
+        overlay.style.whiteSpace = 'pre-wrap';
         overlay.textContent = 'Click anywhere on the page to begin saving the chat...';
         document.body.appendChild(overlay);
         

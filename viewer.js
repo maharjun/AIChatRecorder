@@ -81,8 +81,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     .human { background: #f0f0f0; }
                     .assistant { background: #e3f2fd; }
                     .meta { color: #666; font-size: 14px; margin-bottom: 10px; }
+                    .content { white-space: pre-wrap; font-family: inherit; }
                     img { max-width: 100%; height: auto; margin: 10px 0; }
                     pre { background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto; }
+                    code { font-family: 'Consolas', 'Monaco', monospace; }
                 </style>
             </head>
             <body>
@@ -95,10 +97,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ${chatData.messages.map(msg => `
                     <div class="message ${msg.role}">
                         <div class="meta">Role: ${msg.role}</div>
-                        <div>${msg.content}</div>
-                        ${msg.images ? msg.images.map(img => 
-                            `<img src="${img.src}" alt="${img.alt || ''}">`
-                        ).join('') : ''}
+                        <div class="content">${msg.content}</div>
+                        ${msg.images ? msg.images.map(img => `
+                            <div class="image-container">
+                                <img src="${chrome.runtime.getURL(img.savedPath)}" alt="${img.alt || ''}" />
+                                <div class="image-meta">Original source: <a href="${img.originalSrc}" target="_blank">View original</a></div>
+                            </div>
+                        `).join('') : ''}
                         ${msg.codeBlocks ? msg.codeBlocks.map(code => 
                             `<pre><code class="${code.language}">${code.code}</code></pre>`
                         ).join('') : ''}
