@@ -115,6 +115,11 @@ async function triggerCopy(button) {
 // Helper function to download image
 async function downloadImage(imgElement) {
     try {
+        // Get settings
+        const settings = await chrome.storage.sync.get({
+            attachmentsPath: 'attachments'
+        });
+
         // Click the image thumbnail to open full view
         const thumbnailButton = imgElement.closest('[data-testid^="render_"]').querySelector('[data-testid="file-thumbnail"]');
         thumbnailButton.click();
@@ -138,7 +143,7 @@ async function downloadImage(imgElement) {
             chrome.runtime.sendMessage({
                 action: 'downloadImage',
                 url: fullImage.src,
-                filename: filename
+                filename: `${settings.attachmentsPath}/${filename}`
             }, resolve);
         });
         
@@ -154,7 +159,7 @@ async function downloadImage(imgElement) {
         if (response.success) {
             return {
                 originalSrc: imgElement.src,
-                savedPath: `attachments/${filename}`,
+                savedPath: `${settings.attachmentsPath}/${filename}`,
                 alt: imgElement.alt || ''
             };
         } else {
@@ -350,22 +355,55 @@ async function extractChatData() {
     console.log('Detected platform:', platform);
     if (!platform) return null;
 
+    // Get settings
+    const settings = await chrome.storage.sync.get({
+        attachmentsPath: 'attachments',
+        storageType: 'local',
+        jsonStoragePath: 'chats'
+    });
+
     // Create attachments directory if needed
     try {
         await chrome.runtime.sendMessage({ 
             action: 'createDirectory', 
-            path: 'attachments' 
+            path: settings.attachmentsPath 
         });
+
+        if (settings.storageType === 'json') {
+            await chrome.runtime.sendMessage({
+                action: 'createDirectory',
+                path: settings.jsonStoragePath
+            });
+        }
     } catch (error) {
-        console.error('Error creating attachments directory:', error);
+        console.error('Error creating directories:', error);
     }
 
     try {
+        let chatData;
         if (platform === 'claude') {
-            return await extractClaudeChat();
+            chatData = await extractClaudeChat();
         } else if (platform === 'openai') {
-            return await extractOpenAIChat();
+            chatData = await extractOpenAIChat();
         }
+
+        if (chatData && settings.storageType === 'json') {
+            // Generate a unique filename for the chat
+            const timestamp = new Date().toISOString().replace(/[:\.]/g, '-');
+            const filename = `${settings.jsonStoragePath}/chat_${platform}_${timestamp}.json`;
+            
+            // Save to JSON file
+            await chrome.runtime.sendMessage({
+                action: 'saveJson',
+                path: filename,
+                data: chatData
+            });
+
+            // Add file path to chat data
+            chatData.filePath = filename;
+        }
+
+        return chatData;
     } catch (error) {
         console.error('Error extracting chat:', error);
         return null;

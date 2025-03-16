@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Chat Recorder Settings</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .help-text {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+        .success {
+            background: #dff0d8;
+            color: #3c763d;
+        }
+        .error {
+            background: #f2dede;
+            color: #a94442;
+        }
+    </style>
+</head>
+<body>
+    <h1>AI Chat Recorder Settings</h1>
+    
+    <div class="form-group">
+        <label for="attachmentsPath">Attachments Directory:</label>
+        <input type="text" id="attachmentsPath" placeholder="attachments">
+        <div class="help-text">Directory where images and other attachments will be stored. Default: attachments</div>
+    </div>
+
+    <div class="form-group">
+        <label for="storageType">Chat Storage Type:</label>
+        <select id="storageType">
+            <option value="local">Chrome Local Storage (Default)</option>
+            <option value="json">JSON Files</option>
+        </select>
+        <div class="help-text">How chat data should be stored</div>
+    </div>
+
+    <div class="form-group" id="jsonPathGroup" style="display: none;">
+        <label for="jsonStoragePath">JSON Storage Directory:</label>
+        <input type="text" id="jsonStoragePath" placeholder="chats">
+        <div class="help-text">Directory where chat JSON files will be stored if JSON storage is selected</div>
+    </div>
+
+    <button id="save">Save Settings</button>
+    <div id="status" class="status"></div>
+
+    <script src="options.js"></script>
+</body>
+</html> 
