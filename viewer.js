@@ -1,11 +1,13 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const chatList = document.getElementById('chatList');
+    console.log('Viewer loaded - attempting to fetch chats');
 
     function formatDate(dateString) {
         return new Date(dateString).toLocaleString();
     }
 
     function createChatCard(key, chatData) {
+        console.log('Creating chat card for key:', key, 'data:', chatData);
         const card = document.createElement('div');
         card.className = 'chat-card';
 
@@ -61,6 +63,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function showNoChats() {
+        console.log('No chats found - displaying empty state');
         chatList.innerHTML = '<div class="no-chats">No saved chats found</div>';
     }
 
@@ -122,14 +125,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Load and display saved chats
+    console.log('Fetching all items from storage');
     const storage = await chrome.storage.local.get(null);
+    console.log('All storage items:', storage);
+    
     const chatKeys = Object.keys(storage).filter(key => key.startsWith('chat_'));
+    console.log('Found chat keys:', chatKeys);
 
     if (chatKeys.length === 0) {
         showNoChats();
     } else {
         chatKeys.sort().reverse().forEach(key => {
             const chatData = storage[key];
+            console.log('Processing chat data for key:', key, chatData);
             chatList.appendChild(createChatCard(key, chatData));
         });
     }
