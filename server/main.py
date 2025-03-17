@@ -14,6 +14,7 @@ from sqlalchemy.sql import select
 import asyncio
 from pydantic import BaseModel
 import time
+import uuid
 
 # Setup logging with more detailed format
 logging.basicConfig(
@@ -43,8 +44,10 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["chrome-extension://*"],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,
 )
 
 # Create directories if they don't exist
@@ -109,38 +112,32 @@ async def startup():
     await init_db()
     logger.info("Database initialized")
 
+@app.post("/api/images")
+async def upload_image(file: UploadFile = File(...)):
+    """Handle image upload and return the saved path."""
+    try:
+        # Generate unique filename
+        filename = f"{uuid.uuid4()}.png"
+        filepath = f"data/images/{filename}"
+        
+        # Ensure directory exists
+        os.makedirs("data/images", exist_ok=True)
+        
+        # Save the file
+        async with aiofiles.open(filepath, 'wb') as f:
+            content = await file.read()
+            await f.write(content)
+        
+        return {"path": f"/files/images/{filename}"}
+    except Exception as e:
+        logger.error(f"Error uploading image: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/chats")
 async def save_chat(chat_data: ChatData):
-    """Save a chat with its associated images and attachments."""
+    """Save a chat with its associated images."""
     try:
         logger.info(f"Received chat save request - Platform: {chat_data.platform}, Messages: {len(chat_data.messages)}")
-        
-        # Process and save images from messages
-        for msg in chat_data.messages:
-            if msg.images:
-                processed_images = []
-                for img in msg.images:
-                    if img.get("originalSrc"):
-                        # Generate unique filename
-                        filename = f"images/{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{len(processed_images)}.png"
-                        filepath = f"data/{filename}"
-                        
-                        logger.info(f"Processing image: {img.get('originalSrc')} -> {filepath}")
-                        
-                        # Save image data
-                        if "data" in img:
-                            async with aiofiles.open(filepath, 'wb') as f:
-                                await f.write(img["data"])
-                            
-                            # Update image reference
-                            img["savedPath"] = f"/files/{filename}"
-                            del img["data"]  # Remove binary data after saving
-                            processed_images.append(img)
-                            logger.info(f"Image saved successfully: {filepath}")
-                        else:
-                            logger.warning(f"No image data found for {img.get('originalSrc')}")
-                
-                msg.images = processed_images
         
         # Save to database
         async with async_session() as session:

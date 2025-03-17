@@ -167,4 +167,40 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             });
         }
     }
+
+    if (request.action === 'uploadImage') {
+        console.log('Background script received upload request for:', request.imageUrl);
+        
+        // Handle image upload
+        (async () => {
+            try {
+                // Fetch the image
+                const response = await fetch(request.imageUrl);
+                const blob = await response.blob();
+
+                // Create form data
+                const formData = new FormData();
+                formData.append('file', blob, request.filename);
+
+                // Upload to server
+                const uploadResponse = await fetch(`${SERVER_URL}/api/images`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!uploadResponse.ok) {
+                    throw new Error('Failed to upload image to server');
+                }
+
+                const result = await uploadResponse.json();
+                console.log('Image upload successful:', result);
+                sendResponse(result);
+            } catch (error) {
+                console.error('Failed to upload image:', error);
+                sendResponse({ error: error.message });
+            }
+        })();
+
+        return true; // Keep the message channel open for async response
+    }
 }); 

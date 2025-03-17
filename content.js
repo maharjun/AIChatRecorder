@@ -139,84 +139,113 @@ async function extractClaudeChat() {
     if (!messageContainers.length) return null;
 
     for (const container of messageContainers) {
-        // Check for human message
-        const humanMessage = container.querySelector('[data-testid="user-message"]');
-        if (humanMessage) {
-            console.log('Found human message');
+        console.log('Processing message container');
+        
+        // Find all elements with data-testid in this container
+        const elements = container.querySelectorAll('[data-testid]');
+        let messageContent = null;
+        let messageRole = 'assistant';  // Default role
+        const images = [];
+        
+        // Process each element with data-testid
+        for (const element of elements) {
+            const testId = element.getAttribute('data-testid');
+            console.log('Found element with data-testid:', testId);
             
-            // Find and click the edit button
-            const editButton = container.querySelector('button[data-state="closed"] svg[viewBox="0 0 256 256"]');
-            if (editButton) {
-                const editButtonElement = editButton.closest('button');
-                editButtonElement.click();
-                
-                // Wait for textarea to appear
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                // Find the textarea and get its content
-                const textarea = document.querySelector('textarea[data-1p-ignore="true"]');
-                const userContent = textarea ? textarea.value : null;
-                
-                // Find and click the cancel button
-                const cancelButton = Array.from(document.querySelectorAll('button')).find(button => 
-                    button.textContent === 'Cancel' && 
-                    button.getAttribute('type') === 'button' &&
-                    !button.getAttribute('id') &&
-                    !button.getAttribute('data-state')
-                );
-                
-                if (cancelButton) {
-                    cancelButton.click();
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+            if (testId === 'user-message') {
+                // This is a user message
+                messageRole = 'user';
+                messageContent = element.innerText;
+                console.log('Found user message');
+            } else if (testId === 'action-bar-copy') {
+                // This is Claude's message with a copy button
+                const copyButton = element.closest('button');
+                if (copyButton) {
+                    console.log('Found copy button, attempting to copy');
+                    messageContent = await triggerCopy(copyButton);
                 }
+            } else if (testId && !testId.startsWith('file-thumbnail') && !testId.startsWith('user-message')) {
+                // This might be an image preview
+                console.log('Found potential image:', testId);
+                const previewButton = element.querySelector('button[data-testid="file-thumbnail"]');
                 
-                messages.push({
-                    role: 'user',
-                    content: userContent || humanMessage.innerText,
-                    timestamp: new Date().toISOString()
-                });
-            } else {
-                messages.push({
-                    role: 'user',
-                    content: humanMessage.innerText,
-                    timestamp: new Date().toISOString()
-                });
+                if (previewButton) {
+                    try {
+                        console.log('Found preview button for:', testId);
+                        previewButton.click();
+                        
+                        // Wait for the popup to appear
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        
+                        // Find the popup image
+                        const popup = document.querySelector('#headlessui-portal-root img[alt^="Preview of"]');
+                        if (popup) {
+                            console.log('Processing popup image:', popup.src);
+                            try {
+                                // Send message to background script to handle image upload
+                                const result = await new Promise((resolve, reject) => {
+                                    chrome.runtime.sendMessage({
+                                        action: 'uploadImage',
+                                        imageUrl: popup.src,
+                                        filename: testId + '.png'
+                                    }, response => {
+                                        if (response.error) {
+                                            reject(new Error(response.error));
+                                        } else {
+                                            resolve(response);
+                                        }
+                                    });
+                                });
+
+                                images.push({
+                                    originalSrc: popup.src,
+                                    alt: testId,
+                                    savedPath: result.path
+                                });
+                                console.log('Successfully processed image:', popup.src);
+                                
+                                // Close the popup
+                                const closeButton = document.querySelector('button[aria-label="Close image preview"]');
+                                if (closeButton) {
+                                    closeButton.click();
+                                    await new Promise(resolve => setTimeout(resolve, 500));
+                                }
+                            } catch (error) {
+                                console.error('Failed to process popup image:', error);
+                                images.push({
+                                    originalSrc: popup.src,
+                                    alt: testId
+                                });
+                            }
+                        } else {
+                            console.error('Popup image not found after clicking preview');
+                        }
+                    } catch (error) {
+                        console.error('Failed to process image preview:', error);
+                    }
+                }
             }
         }
-
-        // Check for Claude's message
+        
+        // If we didn't get content from the copy button, try getting it from the message container
+        if (!messageContent && messageRole === 'assistant') {
         const claudeMessage = container.querySelector('.font-claude-message');
         if (claudeMessage) {
-            console.log('Found Claude message');
-            
-            const copyButtonSvg = container.querySelector('[data-testid="action-bar-copy"]');
-            const copyButton = copyButtonSvg?.closest('button');
-            
-            let markdownContent = null;
-            if (copyButton) {
-                console.log('Found copy button, attempting to copy');
-                markdownContent = await triggerCopy(copyButton);
-            }
-                
-            // Handle images
-            const images = [];
-            const imgElements = claudeMessage.querySelectorAll('img');
-            for (const img of imgElements) {
-                const imageInfo = await downloadImage(img);
-                if (imageInfo) {
-                    images.push(imageInfo);
+                messageContent = claudeMessage.innerText;
                 }
             }
 
             // Extract code blocks
-            const codeBlocks = Array.from(claudeMessage.querySelectorAll('pre code')).map(code => ({
-                language: code.className,
+        const codeBlocks = Array.from(container.querySelectorAll('pre code')).map(code => ({
+            language: code.className.replace('language-', ''),
                 code: code.textContent
             }));
 
+        // Add the message if we have content
+        if (messageContent) {
             messages.push({
-                role: 'assistant',
-                content: markdownContent || claudeMessage.innerText,
+                role: messageRole,
+                content: messageContent,
                 images: images,
                 codeBlocks: codeBlocks,
                 timestamp: new Date().toISOString()
