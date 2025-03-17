@@ -81,10 +81,17 @@
             text-align: center;
         }
 
-        .image-container img {
-            max-width: 100%;
+        .image-container img.thumbnail {
+            max-width: 200px;
+            max-height: 150px;
             border-radius: 4px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .image-container img.thumbnail:hover {
+            transform: scale(1.05);
         }
 
         .image-meta {
@@ -100,6 +107,46 @@
 
         .image-meta a:hover {
             text-decoration: underline;
+        }
+
+        /* Image overlay styles */
+        #image-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        #overlay-image {
+            max-width: 90%;
+            max-height: 80%;
+            border-radius: 4px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        #overlay-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 30px;
+            cursor: pointer;
+            z-index: 1001;
+        }
+
+        #overlay-caption {
+            color: white;
+            margin-top: 15px;
+            font-size: 14px;
+            max-width: 80%;
+            text-align: center;
         }
 
         pre {
@@ -127,5 +174,12 @@
 </head>
 <body>
     <div id="chat-content"></div>
+    
+    <!-- Image overlay container -->
+    <div id="image-overlay">
+        <span id="overlay-close">&times;</span>
+        <img id="overlay-image" src="" alt="">
+        <div id="overlay-caption"></div>
+    </div>
 </body>
 </html> 

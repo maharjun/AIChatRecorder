@@ -145,9 +145,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                             imgContainer.className = 'image-container';
                             
                             const imgElement = win.document.createElement('img');
+                            imgElement.className = 'thumbnail';
                             imgElement.src = `${SERVER_URL}${img.savedPath}`;
                             imgElement.alt = img.alt || '';
                             imgElement.dataset.originalSrc = img.originalSrc;
+                            
+                            // Add click event to open the overlay
+                            imgElement.addEventListener('click', () => {
+                                const fullImageSrc = `${SERVER_URL}${img.savedPath}`;
+                                const caption = `Original source: ${img.originalSrc}`;
+                                win.openImageOverlay(fullImageSrc, caption);
+                            });
                             
                             const imgMeta = win.document.createElement('div');
                             imgMeta.className = 'image-meta';
