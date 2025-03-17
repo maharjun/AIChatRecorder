@@ -70,4 +70,27 @@ window.addEventListener('message', (event) => {
             }, '*');
         });
     }
+    
+    // Handle text upload requests
+    if (event.data.type === 'AI_CHAT_RECORDER_UPLOAD_TEXT') {
+        const { requestId, textContent, filename } = event.data;
+        
+        console.log('Content loader received text upload request:', requestId, 'length:', textContent?.length || 0);
+        
+        // Forward the request to the background script
+        chrome.runtime.sendMessage({
+            action: 'uploadText',
+            textContent: textContent,
+            filename: filename
+        }, response => {
+            console.log('Received text upload response:', response);
+            // Send the response back to the page context
+            window.postMessage({
+                type: 'AI_CHAT_RECORDER_TEXT_RESULT',
+                requestId: requestId,
+                result: response,
+                error: response?.error
+            }, '*');
+        });
+    }
 }); 

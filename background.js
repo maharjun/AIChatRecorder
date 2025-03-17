@@ -200,4 +200,40 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         return true; // Keep the message channel open for async response
     }
+    
+    if (request.action === 'uploadText') {
+        console.log('Background script received text upload request for:', request.filename, 'length:', request.textContent?.length || 0);
+        
+        // Handle text upload
+        (async () => {
+            try {
+                console.log('Sending text content to server...');
+                // Upload to server
+                const uploadResponse = await fetch(`${SERVER_URL}/api/text`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        content: request.textContent
+                    })
+                });
+
+                if (!uploadResponse.ok) {
+                    const errorText = await uploadResponse.text();
+                    console.error('Server responded with error:', uploadResponse.status, errorText);
+                    throw new Error(`Failed to upload text to server: ${uploadResponse.status} ${errorText}`);
+                }
+
+                const result = await uploadResponse.json();
+                console.log('Text upload successful:', result);
+                sendResponse(result);
+            } catch (error) {
+                console.error('Failed to upload text:', error);
+                sendResponse({ error: error.message });
+            }
+        })();
+
+        return true; // Keep the message channel open for async response
+    }
 }); 

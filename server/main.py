@@ -53,6 +53,7 @@ app.add_middleware(
 # Create directories if they don't exist
 os.makedirs("data/images", exist_ok=True)
 os.makedirs("data/attachments", exist_ok=True)
+os.makedirs("data/text", exist_ok=True)  # Add directory for text attachments
 
 # Mount static files directory
 app.mount("/files", StaticFiles(directory="data"), name="files")
@@ -81,6 +82,7 @@ class ChatMessage(BaseModel):
     role: str
     content: str
     images: Optional[List[dict]] = []
+    textAttachments: Optional[List[dict]] = []
     codeBlocks: Optional[List[dict]] = []
     timestamp: str
 
@@ -131,6 +133,32 @@ async def upload_image(file: UploadFile = File(...)):
         return {"path": f"/files/images/{filename}"}
     except Exception as e:
         logger.error(f"Error uploading image: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/text")
+async def save_text_content(request: Request):
+    """Handle text content upload and return the saved path."""
+    try:
+        # Parse the request body
+        data = await request.json()
+        
+        if "content" not in data or not data["content"]:
+            raise HTTPException(status_code=400, detail="Text content is required")
+            
+        # Generate unique filename
+        filename = f"{uuid.uuid4()}.txt"
+        filepath = f"data/text/{filename}"
+        
+        # Ensure directory exists
+        os.makedirs("data/text", exist_ok=True)
+        
+        # Save the text content
+        async with aiofiles.open(filepath, 'w', encoding='utf-8') as f:
+            await f.write(data["content"])
+        
+        return {"path": f"/files/text/{filename}"}
+    except Exception as e:
+        logger.error(f"Error saving text content: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/chats")
@@ -223,6 +251,14 @@ async def delete_chat(chat_id: int):
                     for img in msg["images"]:
                         if "savedPath" in img:
                             filepath = f"data/{img['savedPath'].split('/files/')[1]}"
+                            try:
+                                os.remove(filepath)
+                            except Exception as e:
+                                logger.warning(f"Failed to delete file {filepath}: {str(e)}")
+                if "textAttachments" in msg:
+                    for txt in msg["textAttachments"]:
+                        if "savedPath" in txt:
+                            filepath = f"data/{txt['savedPath'].split('/files/')[1]}"
                             try:
                                 os.remove(filepath)
                             except Exception as e:
