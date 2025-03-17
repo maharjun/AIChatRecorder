@@ -63,11 +63,6 @@ class ClaudeDataRetriever extends AIDataRetriever {
                 }
             }
 
-            // Extract code blocks
-            const codeBlocks = Array.from(container.querySelectorAll('pre code')).map(code => ({
-                language: code.className.replace('language-', ''),
-                code: code.textContent
-            }));
 
             // Add the message if we have content
             if (messageContent) {
@@ -76,7 +71,6 @@ class ClaudeDataRetriever extends AIDataRetriever {
                     content: messageContent,
                     images: images,
                     textAttachments: textAttachments,
-                    codeBlocks: codeBlocks,
                     timestamp: new Date().toISOString()
                 });
             }
@@ -291,7 +285,7 @@ class ClaudeDataRetriever extends AIDataRetriever {
                     type: 'AI_CHAT_RECORDER_UPLOAD_IMAGE',
                     requestId: requestId,
                     imageUrl: popup.src,
-                    filename: testId + '.png'
+                    filename: testId
                 }, '*');
                 
                 // Set a timeout to prevent hanging
@@ -304,6 +298,7 @@ class ClaudeDataRetriever extends AIDataRetriever {
             const imageInfo = {
                 type: 'image',
                 originalSrc: popup.src,
+                originalFilename: testId,
                 alt: testId,
                 savedPath: result.path
             };
@@ -383,7 +378,7 @@ class ClaudeDataRetriever extends AIDataRetriever {
                     type: 'AI_CHAT_RECORDER_UPLOAD_TEXT',
                     requestId: requestId,
                     textContent: textContent,
-                    filename: testId + '.txt'
+                    filename: testId
                 }, '*');
                 
                 // Set a timeout to prevent hanging
@@ -397,6 +392,7 @@ class ClaudeDataRetriever extends AIDataRetriever {
                 type: 'text',
                 title: testId,
                 content: textContent,
+                originalFilename: testId,
                 savedPath: result.path
             };
             

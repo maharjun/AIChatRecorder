@@ -70,7 +70,7 @@ class AIDataRetriever {
                         role: msg.role,
                         content: msg.content || '',
                         images: msg.images || [],
-                        codeBlocks: msg.codeBlocks || [],
+                        textAttachments: msg.textAttachments || [],
                         timestamp: msg.timestamp
                     })),
                     capturedAt: chatData.captured_at || new Date().toISOString()

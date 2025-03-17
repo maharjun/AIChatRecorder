@@ -137,7 +137,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     messageDiv.appendChild(contentDiv);
                     
                     // Add images
-                    if (msg.images) {
+                    if (msg.images && msg.images.length > 0) {
                         msg.images.forEach((img, imgIndex) => {
                             console.log(`Processing image ${imgIndex + 1} in message ${msgIndex + 1}:`, img.savedPath);
                             
@@ -167,18 +167,59 @@ document.addEventListener('DOMContentLoaded', async () => {
                         });
                     }
                     
-                    // Add code blocks
-                    if (msg.codeBlocks) {
-                        msg.codeBlocks.forEach(code => {
-                            const pre = win.document.createElement('pre');
-                            const codeElement = win.document.createElement('code');
-                            codeElement.className = code.language;
-                            codeElement.textContent = code.code;
-                            pre.appendChild(codeElement);
-                            messageDiv.appendChild(pre);
+                    // Add text attachments
+                    if (msg.textAttachments && msg.textAttachments.length > 0) {
+                        msg.textAttachments.forEach((txt, txtIndex) => {
+                            console.log(`Processing text attachment ${txtIndex + 1} in message ${msgIndex + 1}:`, txt.savedPath);
+                            
+                            const textContainer = win.document.createElement('div');
+                            textContainer.className = 'text-container';
+                            
+                            // Create text thumbnail
+                            const textThumbnail = win.document.createElement('div');
+                            textThumbnail.className = 'text-thumbnail';
+                            
+                            // Add text icon
+                            const textIcon = win.document.createElement('div');
+                            textIcon.className = 'text-icon';
+                            textIcon.innerHTML = '📄';
+                            textThumbnail.appendChild(textIcon);
+                            
+                            // Add filename
+                            const filename = txt.title || 'text-attachment.txt';
+                            const filenameDiv = win.document.createElement('div');
+                            filenameDiv.className = 'text-filename';
+                            filenameDiv.textContent = filename;
+                            textThumbnail.appendChild(filenameDiv);
+                            
+                            // Add click event to open the text overlay
+                            textThumbnail.addEventListener('click', async () => {
+                                try {
+                                    // Fetch the text content from the server
+                                    const textResponse = await fetch(`${SERVER_URL}${txt.savedPath}`);
+                                    if (!textResponse.ok) {
+                                        throw new Error('Failed to fetch text content');
+                                    }
+                                    const textContent = await textResponse.text();
+                                    
+                                    // Open the text overlay
+                                    win.openTextOverlay(textContent, filename, filename);
+                                } catch (error) {
+                                    console.error('Error loading text content:', error);
+                                    win.openTextOverlay(txt.content || 'Failed to load content from server', filename, filename);
+                                }
+                            });
+                            
+                            const textMeta = win.document.createElement('div');
+                            textMeta.className = 'text-meta';
+                            textMeta.textContent = `Text attachment: ${filename}`;
+                            
+                            textContainer.appendChild(textThumbnail);
+                            textContainer.appendChild(textMeta);
+                            messageDiv.appendChild(textContainer);
                         });
                     }
-                    
+                                        
                     content.appendChild(messageDiv);
                 });
             });

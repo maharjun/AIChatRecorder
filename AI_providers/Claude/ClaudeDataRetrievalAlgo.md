@@ -222,18 +222,6 @@ async retrieveFileAttachment(element, testId) {
 }
 ```
 
-### 6. Code Block Extraction
-
-Code blocks are extracted directly from the DOM:
-
-```javascript
-// Extract code blocks
-const codeBlocks = Array.from(container.querySelectorAll('pre code')).map(code => ({
-    language: code.className.replace('language-', ''),
-    code: code.textContent
-}));
-```
-
 ### 7. Data Validation and Formatting
 
 After extraction, the data is validated and formatted into a consistent structure:
@@ -247,7 +235,7 @@ const validatedData = {
         role: msg.role,
         content: msg.content || '',
         images: msg.images || [],
-        codeBlocks: msg.codeBlocks || [],
+        textAttachments: msg.textAttachments || [],
         timestamp: msg.timestamp
     })),
     capturedAt: chatData.captured_at || new Date().toISOString()
@@ -294,19 +282,14 @@ The final output of the algorithm is a structured JSON object:
       "role": "user",
       "content": "User message text",
       "images": [],
-      "codeBlocks": [],
+      "textAttachments": [],
       "timestamp": "2023-06-15T12:34:56.789Z"
     },
     {
       "role": "assistant",
       "content": "Claude's response text",
       "images": [],
-      "codeBlocks": [
-        {
-          "language": "javascript",
-          "code": "console.log('Hello world');"
-        }
-      ],
+      "textAttachments": [],
       "timestamp": "2023-06-15T12:35:10.123Z"
     }
   ],

@@ -83,7 +83,6 @@ class ChatMessage(BaseModel):
     content: str
     images: Optional[List[dict]] = []
     textAttachments: Optional[List[dict]] = []
-    codeBlocks: Optional[List[dict]] = []
     timestamp: str
 
 class ChatData(BaseModel):
@@ -167,6 +166,13 @@ async def save_chat(chat_data: ChatData):
     try:
         logger.info(f"Received chat save request - Platform: {chat_data.platform}, Messages: {len(chat_data.messages)}")
         
+        logger.info(f"Saved chat messages:")
+        for msg in chat_data.messages:
+            logger.info(f"Message textAttachments length: {len(msg.textAttachments)}")
+        json_dict = json.loads(chat_data.model_dump_json())
+        for msg in json_dict["messages"]:
+            logger.info(f"Message textAttachments length in json_dict: {len(msg['textAttachments'])}")
+        
         # Save to database
         async with async_session() as session:
             chat = Chat(
@@ -174,7 +180,7 @@ async def save_chat(chat_data: ChatData):
                 title=chat_data.title,
                 url=chat_data.url,
                 captured_at=datetime.fromisoformat(chat_data.capturedAt),
-                messages=json.loads(chat_data.json())["messages"]
+                messages=json.loads(chat_data.model_dump_json())["messages"]
             )
             session.add(chat)
             await session.commit()
