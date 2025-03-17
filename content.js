@@ -306,6 +306,25 @@ async function extractChatData() {
             chatData = await extractOpenAIChat();
         }
 
+        // Validate chat data structure
+        if (chatData) {
+            // Ensure all required fields are present
+            chatData = {
+                platform: chatData.platform,
+                title: chatData.title || 'Untitled Chat',
+                url: chatData.url,
+                messages: chatData.messages.map(msg => ({
+                    role: msg.role,
+                    content: msg.content || '',
+                    images: msg.images || [],
+                    codeBlocks: msg.codeBlocks || [],
+                    timestamp: msg.timestamp
+                })),
+                capturedAt: chatData.captured_at || new Date().toISOString()
+            };
+            console.log('Validated chat data:', chatData);
+        }
+
         return chatData;
     } catch (error) {
         console.error('Error extracting chat:', error);

@@ -44,6 +44,20 @@ async function isTabReady(tab) {
 // Server configuration
 const SERVER_URL = 'http://localhost:8000';
 
+// Create notification helper function
+function showNotification(title, message) {
+    try {
+        chrome.notifications.create({
+            type: 'basic',
+            iconUrl: 'icons/icon48.png',
+            title: title || 'AI Chat Recorder',
+            message: message
+        });
+    } catch (error) {
+        console.error('Failed to show notification:', error);
+    }
+}
+
 // Handle saving chat
 async function handleSaveChat(tab) {
     try {
@@ -93,12 +107,7 @@ async function handleSaveChat(tab) {
 
     } catch (error) {
         console.error('Error initiating chat save:', error);
-        await chrome.notifications.create({
-            type: 'basic',
-            iconUrl: 'icons/icon48.png',
-            title: 'AI Chat Recorder',
-            message: 'Error saving chat: ' + error.message
-        });
+        showNotification('AI Chat Recorder', 'Error saving chat: ' + error.message);
     }
 }
 
@@ -137,12 +146,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         if (request.error) {
             console.error('Chat extraction error:', request.error);
-            chrome.notifications.create({
-                type: 'basic',
-                iconUrl: 'icons/icon48.png',
-                title: 'AI Chat Recorder',
-                message: 'Error saving chat: ' + request.error
-            });
+            showNotification('AI Chat Recorder', 'Error saving chat: ' + request.error);
         } else if (request.data) {
             // Save chat to server
             fetch(`${SERVER_URL}/api/chats`, {
@@ -155,21 +159,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             .then(response => response.json())
             .then(result => {
                 console.log('Chat saved to server:', result);
-                chrome.notifications.create({
-                    type: 'basic',
-                    iconUrl: 'icons/icon48.png',
-                    title: 'AI Chat Recorder',
-                    message: 'Chat saved successfully!'
-                });
+                showNotification('AI Chat Recorder', 'Chat saved successfully!');
             })
             .catch(error => {
                 console.error('Error saving chat to server:', error);
-                chrome.notifications.create({
-                    type: 'basic',
-                    iconUrl: 'icons/icon48.png',
-                    title: 'AI Chat Recorder',
-                    message: 'Error saving chat: ' + error.message
-                });
+                showNotification('AI Chat Recorder', 'Error saving chat: ' + error.message);
             });
         }
     }
