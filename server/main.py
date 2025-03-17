@@ -246,22 +246,33 @@ async def delete_chat(chat_id: int):
             
             # Delete associated files
             for msg in chat.messages:
-                if "images" in msg:
+                # Handle image files
+                if "images" in msg and msg["images"]:
                     for img in msg["images"]:
-                        if "savedPath" in img:
+                        if "savedPath" in img and img["savedPath"]:
                             filepath = f"data/{img['savedPath'].split('/files/')[1]}"
                             try:
-                                os.remove(filepath)
+                                if os.path.exists(filepath):
+                                    os.remove(filepath)
+                                    logger.info(f"Deleted image file: {filepath}")
+                                else:
+                                    logger.warning(f"Image file not found: {filepath}")
                             except Exception as e:
-                                logger.warning(f"Failed to delete file {filepath}: {str(e)}")
-                if "textAttachments" in msg:
+                                logger.warning(f"Failed to delete image file {filepath}: {str(e)}")
+                
+                # Handle text attachment files
+                if "textAttachments" in msg and msg["textAttachments"]:
                     for txt in msg["textAttachments"]:
-                        if "savedPath" in txt:
+                        if "savedPath" in txt and txt["savedPath"]:
                             filepath = f"data/{txt['savedPath'].split('/files/')[1]}"
                             try:
-                                os.remove(filepath)
+                                if os.path.exists(filepath):
+                                    os.remove(filepath)
+                                    logger.info(f"Deleted text file: {filepath}")
+                                else:
+                                    logger.warning(f"Text file not found: {filepath}")
                             except Exception as e:
-                                logger.warning(f"Failed to delete file {filepath}: {str(e)}")
+                                logger.warning(f"Failed to delete text file {filepath}: {str(e)}")
             
             # Delete from database
             await session.delete(chat)
