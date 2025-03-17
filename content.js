@@ -153,10 +153,47 @@ async function extractClaudeChat() {
             console.log('Found element with data-testid:', testId);
             
             if (testId === 'user-message') {
-                // This is a user message
+                // This is a user message - use edit button strategy
                 messageRole = 'user';
-                messageContent = element.innerText;
                 console.log('Found user message');
+                
+                // Find and click the edit button
+                const editButton = Array.from(container.querySelectorAll('button')).find(button => {
+                    const hasSvg = button.querySelector('svg');
+                    const hasEditText = button.textContent.trim() === 'Edit';
+                    return hasSvg && hasEditText;
+                });
+                
+                if (editButton) {
+                    console.log('Found edit button, clicking...');
+                    editButton.click();
+                    
+                    // Wait for textarea to appear
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    
+                    // Find the textarea and get its content
+                    const textarea = document.querySelector('textarea[data-1p-ignore="true"]');
+                    messageContent = textarea ? textarea.value : element.innerText;
+                    
+                    // Find and click the cancel button
+                    const cancelButton = Array.from(document.querySelectorAll('button')).find(button => 
+                        button.textContent === 'Cancel' && 
+                        button.getAttribute('type') === 'button' &&
+                        !button.getAttribute('id') &&
+                        !button.getAttribute('data-state')
+                    );
+                    
+                    if (cancelButton) {
+                        cancelButton.click();
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    } else {
+                        console.error('Cancel button not found');
+                        messageContent = element.innerText;
+                    }
+                } else {
+                    console.log('Edit button not found, using innerText');
+                    messageContent = element.innerText;
+                }
             } else if (testId === 'action-bar-copy') {
                 // This is Claude's message with a copy button
                 const copyButton = element.closest('button');
@@ -229,17 +266,17 @@ async function extractClaudeChat() {
         
         // If we didn't get content from the copy button, try getting it from the message container
         if (!messageContent && messageRole === 'assistant') {
-        const claudeMessage = container.querySelector('.font-claude-message');
-        if (claudeMessage) {
+            const claudeMessage = container.querySelector('.font-claude-message');
+            if (claudeMessage) {
                 messageContent = claudeMessage.innerText;
-                }
             }
+        }
 
-            // Extract code blocks
+        // Extract code blocks
         const codeBlocks = Array.from(container.querySelectorAll('pre code')).map(code => ({
             language: code.className.replace('language-', ''),
-                code: code.textContent
-            }));
+            code: code.textContent
+        }));
 
         // Add the message if we have content
         if (messageContent) {
