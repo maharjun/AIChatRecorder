@@ -38,11 +38,11 @@ class AIDataRetriever {
         
         if (platform === 'claude') {
             // Dynamically import the Claude implementation
-            return import('./ClaudeDataRetriever.js')
+            return import('./AI_providers/Claude/ClaudeDataRetriever.js')
                 .then(module => new module.default(serverUrl));
         } else if (platform === 'openai') {
             // Dynamically import the OpenAI implementation
-            return import('./OpenAIDataRetriever.js')
+            return import('./AI_providers/OpenAI/OpenAIDataRetriever.js')
                 .then(module => new module.default(serverUrl));
         }
         

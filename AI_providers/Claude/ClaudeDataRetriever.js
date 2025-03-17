@@ -1,7 +1,7 @@
 // ClaudeDataRetriever.js
 // Claude-specific implementation of AIDataRetriever
 
-import AIDataRetriever from './AIDataRetriever.js';
+import AIDataRetriever from '../../AIDataRetriever.js';
 
 class ClaudeDataRetriever extends AIDataRetriever {
     constructor(serverUrl = 'http://localhost:8000') {

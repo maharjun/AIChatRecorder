@@ -1,7 +1,7 @@
 // OpenAIDataRetriever.js
 // OpenAI-specific implementation of AIDataRetriever
 
-import AIDataRetriever from './AIDataRetriever.js';
+import AIDataRetriever from '../../AIDataRetriever.js';
 
 class OpenAIDataRetriever extends AIDataRetriever {
     constructor(serverUrl = 'http://localhost:8000') {
