@@ -41,12 +41,25 @@ async function isTabReady(tab) {
     }
 }
 
+// Server configuration
+const SERVER_URL = 'http://localhost:8000';
+
 // Handle saving chat
 async function handleSaveChat(tab) {
     try {
         // Check if we have a valid tab
         if (!tab || !tab.id) {
             throw new Error('No active tab found');
+        }
+
+        // Check if server is running
+        try {
+            const response = await fetch(`${SERVER_URL}/api/chats`);
+            if (!response.ok) {
+                throw new Error('Server not responding');
+            }
+        } catch (error) {
+            throw new Error('Server not running. Please start the Python server first.');
         }
 
         // Check if the tab is ready
@@ -94,9 +107,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log('Received message:', request.action, 'from:', sender);
 
     if (request.action === 'createDirectory') {
-        // Instead of creating a directory (which we can't do directly),
-        // we'll just acknowledge the request. The downloads API will create
-        // the directory when needed
+        // No longer needed as server handles directory creation
         sendResponse({ success: true });
         return true;
     }
@@ -111,24 +122,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     if (request.action === 'downloadImage') {
-        const { url, filename } = request;
-        chrome.downloads.download({
-            url: url,
-            filename: `attachments/${filename}`,
-            saveAs: false
-        }, (downloadId) => {
-            if (chrome.runtime.lastError) {
-                sendResponse({ success: false, error: chrome.runtime.lastError });
-            } else {
-                sendResponse({ success: true, downloadId });
-            }
-        });
+        // Images are now handled by the server during chat save
+        sendResponse({ success: true });
         return true;
     }
 
     if (request.action === 'chatExtracted') {
-        console.log('Chat extraction completed');
+        console.log('Chat extraction completed, data received:', {
+            hasError: !!request.error,
+            hasData: !!request.data,
+            platform: request.data?.platform,
+            messageCount: request.data?.messages?.length
+        });
+
         if (request.error) {
+            console.error('Chat extraction error:', request.error);
             chrome.notifications.create({
                 type: 'basic',
                 iconUrl: 'icons/icon48.png',
@@ -136,25 +144,33 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 message: 'Error saving chat: ' + request.error
             });
         } else if (request.data) {
-            const timestamp = new Date().toISOString();
-            const key = `chat_${timestamp}`;
-            chrome.storage.local.set({ [key]: request.data })
-                .then(() => {
-                    chrome.notifications.create({
-                        type: 'basic',
-                        iconUrl: 'icons/icon48.png',
-                        title: 'AI Chat Recorder',
-                        message: 'Chat saved successfully!'
-                    });
-                })
-                .catch(error => {
-                    chrome.notifications.create({
-                        type: 'basic',
-                        iconUrl: 'icons/icon48.png',
-                        title: 'AI Chat Recorder',
-                        message: 'Error saving chat: ' + error.message
-                    });
+            // Save chat to server
+            fetch(`${SERVER_URL}/api/chats`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(request.data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                console.log('Chat saved to server:', result);
+                chrome.notifications.create({
+                    type: 'basic',
+                    iconUrl: 'icons/icon48.png',
+                    title: 'AI Chat Recorder',
+                    message: 'Chat saved successfully!'
                 });
+            })
+            .catch(error => {
+                console.error('Error saving chat to server:', error);
+                chrome.notifications.create({
+                    type: 'basic',
+                    iconUrl: 'icons/icon48.png',
+                    title: 'AI Chat Recorder',
+                    message: 'Error saving chat: ' + error.message
+                });
+            });
         }
     }
 }); 

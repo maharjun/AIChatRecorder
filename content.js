@@ -1,32 +1,49 @@
-// Helper function to extract attachments
-async function extractAttachments() {
-  const attachments = [];
-  
-  // For images
-  const images = document.querySelectorAll('img[src^="data:"], img[src^="blob:"], img[src^="http"]');
-  for (const img of images) {
+// Server configuration
+const SERVER_URL = 'http://localhost:8000';
+
+// Helper function to download image
+async function downloadImage(imgElement) {
+    console.log('Starting image download process for:', imgElement.src);
     try {
-      attachments.push({
-        type: 'image',
-        url: img.src,
-        alt: img.alt || ''
-      });
+        // For data URLs and blob URLs, we need to fetch the data first
+        let imageBlob;
+        if (imgElement.src.startsWith('data:') || imgElement.src.startsWith('blob:')) {
+            const response = await fetch(imgElement.src);
+            imageBlob = await response.blob();
+        } else {
+            // For regular URLs, send them directly to the server
+            return {
+                originalSrc: imgElement.src,
+                alt: imgElement.alt || ''
+            };
+        }
+
+        // Create form data
+        const formData = new FormData();
+        formData.append('file', imageBlob, 'image.png');
+
+        // Upload to server
+        const response = await fetch(`${SERVER_URL}/api/images`, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to upload image to server');
+        }
+
+        const result = await response.json();
+        console.log('Image upload successful:', result);
+
+        return {
+            originalSrc: imgElement.src,
+            savedPath: result.path,
+            alt: imgElement.alt || ''
+        };
     } catch (error) {
-      console.error('Error extracting image:', error);
+        console.error('Failed to process image:', error);
+        return null;
     }
-  }
-  
-  // For file attachments (PDFs, etc.)
-  const fileLinks = document.querySelectorAll('a[href$=".pdf"], a[href$=".doc"], a[href$=".docx"]');
-  for (const link of fileLinks) {
-    attachments.push({
-      type: 'file',
-      url: link.href,
-      name: link.textContent || link.href.split('/').pop()
-    });
-  }
-  
-  return attachments;
 }
 
 // Function to detect which chat platform we're on
@@ -112,70 +129,10 @@ async function triggerCopy(button) {
     }
 }
 
-// Helper function to download image
-async function downloadImage(imgElement) {
-    try {
-        // Get settings
-        const settings = await chrome.storage.sync.get({
-            attachmentsPath: 'attachments'
-        });
-
-        // Click the image thumbnail to open full view
-        const thumbnailButton = imgElement.closest('[data-testid^="render_"]').querySelector('[data-testid="file-thumbnail"]');
-        thumbnailButton.click();
-        
-        // Wait for the full-size image to load
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Get the full-size image
-        const fullImage = document.querySelector('#headlessui-dialog-\\:r32\\: img');
-        if (!fullImage) {
-            throw new Error('Full size image not found');
-        }
-
-        // Create a unique filename
-        const timestamp = new Date().toISOString().replace(/[:\.]/g, '-');
-        const originalName = fullImage.alt || 'image';
-        const filename = `${timestamp}-${originalName}`;
-
-        // Send download request to background script
-        const response = await new Promise((resolve) => {
-            chrome.runtime.sendMessage({
-                action: 'downloadImage',
-                url: fullImage.src,
-                filename: `${settings.attachmentsPath}/${filename}`
-            }, resolve);
-        });
-        
-        // Close the image preview
-        const closeButton = document.querySelector('[data-testid="close-file-preview"]');
-        if (closeButton) {
-            closeButton.click();
-        }
-        
-        // Wait for the dialog to close
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        if (response.success) {
-            return {
-                originalSrc: imgElement.src,
-                savedPath: `${settings.attachmentsPath}/${filename}`,
-                alt: imgElement.alt || ''
-            };
-        } else {
-            throw new Error(response.error || 'Failed to download image');
-        }
-    } catch (error) {
-        console.error('Failed to download image:', error);
-        return null;
-    }
-}
-
 // Function to extract chat messages from Claude
 async function extractClaudeChat() {
     console.log('Extracting Claude chat...');
     const messages = [];
-    // Find all message containers in the chat
     const messageContainers = document.querySelectorAll('div[data-test-render-count]');
     
     console.log('Found message containers:', messageContainers.length);
@@ -200,7 +157,7 @@ async function extractClaudeChat() {
                 const textarea = document.querySelector('textarea[data-1p-ignore="true"]');
                 const userContent = textarea ? textarea.value : null;
                 
-                // Find and click the cancel button - more specific selector
+                // Find and click the cancel button
                 const cancelButton = Array.from(document.querySelectorAll('button')).find(button => 
                     button.textContent === 'Cancel' && 
                     button.getAttribute('type') === 'button' &&
@@ -210,21 +167,17 @@ async function extractClaudeChat() {
                 
                 if (cancelButton) {
                     cancelButton.click();
-                    
-                    // Wait longer for UI to return to normal
                     await new Promise(resolve => setTimeout(resolve, 1000));
-                } else {
-                    console.error('Cancel button not found');
                 }
                 
                 messages.push({
-                    role: 'human',
+                    role: 'user',
                     content: userContent || humanMessage.innerText,
                     timestamp: new Date().toISOString()
                 });
             } else {
                 messages.push({
-                    role: 'human',
+                    role: 'user',
                     content: humanMessage.innerText,
                     timestamp: new Date().toISOString()
                 });
@@ -236,7 +189,6 @@ async function extractClaudeChat() {
         if (claudeMessage) {
             console.log('Found Claude message');
             
-            // Find the copy button's parent button element
             const copyButtonSvg = container.querySelector('[data-testid="action-bar-copy"]');
             const copyButton = copyButtonSvg?.closest('button');
             
@@ -244,13 +196,6 @@ async function extractClaudeChat() {
             if (copyButton) {
                 console.log('Found copy button, attempting to copy');
                 markdownContent = await triggerCopy(copyButton);
-                if (markdownContent) {
-                    console.log('Successfully got markdown content, length:', markdownContent.length);
-                } else {
-                    console.log('Failed to get markdown content, falling back to innerText');
-                }
-            } else {
-                console.log('No copy button found');
             }
                 
             // Handle images
@@ -279,15 +224,13 @@ async function extractClaudeChat() {
         }
     }
 
-    const result = {
+    return {
         platform: 'claude',
         title: document.title,
         url: window.location.href,
         messages: messages,
-        capturedAt: new Date().toISOString()
+        captured_at: new Date().toISOString()
     };
-    console.log('Extracted chat data:', result);
-    return result;
 }
 
 // Function to extract chat messages from OpenAI
@@ -344,7 +287,7 @@ async function extractOpenAIChat() {
         title: document.title,
         url: window.location.href,
         messages: messages,
-        capturedAt: new Date().toISOString()
+        captured_at: new Date().toISOString()
     };
 }
 
@@ -355,52 +298,12 @@ async function extractChatData() {
     console.log('Detected platform:', platform);
     if (!platform) return null;
 
-    // Get settings
-    const settings = await chrome.storage.sync.get({
-        attachmentsPath: 'attachments',
-        storageType: 'local',
-        jsonStoragePath: 'chats'
-    });
-
-    // Create attachments directory if needed
-    try {
-        await chrome.runtime.sendMessage({ 
-            action: 'createDirectory', 
-            path: settings.attachmentsPath 
-        });
-
-        if (settings.storageType === 'json') {
-            await chrome.runtime.sendMessage({
-                action: 'createDirectory',
-                path: settings.jsonStoragePath
-            });
-        }
-    } catch (error) {
-        console.error('Error creating directories:', error);
-    }
-
     try {
         let chatData;
         if (platform === 'claude') {
             chatData = await extractClaudeChat();
         } else if (platform === 'openai') {
             chatData = await extractOpenAIChat();
-        }
-
-        if (chatData && settings.storageType === 'json') {
-            // Generate a unique filename for the chat
-            const timestamp = new Date().toISOString().replace(/[:\.]/g, '-');
-            const filename = `${settings.jsonStoragePath}/chat_${platform}_${timestamp}.json`;
-            
-            // Save to JSON file
-            await chrome.runtime.sendMessage({
-                action: 'saveJson',
-                path: filename,
-                data: chatData
-            });
-
-            // Add file path to chat data
-            chatData.filePath = filename;
         }
 
         return chatData;
@@ -418,7 +321,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         console.log('Waiting for document click to begin extraction...');
         
         // First, send an immediate acknowledgment
-        sendResponse({ status: 'waiting_for_click' });
+        sendResponse({ status: 'extracting' });
         
         // Create and show an overlay message
         const overlay = document.createElement('div');
@@ -461,6 +364,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         
         document.addEventListener('click', clickHandler);
         
-        return false; // We've already sent our response
+        return true; // Keep the message channel open
     }
-}); 
+});
+

@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+sqlalchemy
+aiosqlite
+python-multipart
+pillow
+python-jose[cryptography]
+aiofiles

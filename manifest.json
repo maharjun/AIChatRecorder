@@ -2,21 +2,25 @@
   "manifest_version": 3,
   "name": "AI Chat Recorder",
   "version": "1.0",
-  "description": "Save OpenAI and Claude chat conversations with attachments",
+  "description": "Record and save AI chat conversations with images and code blocks",
   "permissions": [
-    "activeTab",
     "storage",
-    "downloads",
     "contextMenus",
-    "notifications",
-    "clipboardRead",
-    "clipboardWrite",
+    "activeTab",
     "scripting"
   ],
   "host_permissions": [
-    "https://chat.openai.com/*",
-    "https://claude.ai/*"
+    "http://localhost:8000/*"
   ],
+  "web_accessible_resources": [{
+    "resources": [
+      "viewer.html",
+      "chat-view.html",
+      "chat-view.js",
+      "attachments/*"
+    ],
+    "matches": ["<all_urls>"]
+  }],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
@@ -29,7 +33,9 @@
     {
       "matches": [
         "https://chat.openai.com/*",
-        "https://claude.ai/*"
+        "https://claude.ai/*",
+        "https://bard.google.com/*",
+        "https://poe.com/*"
       ],
       "js": ["content.js"]
     }
