@@ -82,27 +82,24 @@ async function handleSaveChat(tab) {
             throw new Error('Tab not ready for messaging');
         }
 
-        // Inject content script if needed
-        try {
-            await chrome.scripting.executeScript({
-                target: { tabId: tab.id },
-                files: ['content.js']
-            });
-        } catch (error) {
-            console.log('Content script already injected or injection failed:', error);
-        }
-
         // Send message to content script
         console.log('Sending extractChat message to tab:', tab.id);
-        const response = await chrome.tabs.sendMessage(tab.id, { 
-            action: 'extractChat',
-            attempt: Date.now()
-        });
+        try {
+            const response = await chrome.tabs.sendMessage(tab.id, { 
+                action: 'extractChat',
+                attempt: Date.now()
+            });
 
-        console.log('Received initial response:', response);
-        
-        if (response.status !== 'extracting') {
-            throw new Error('Failed to start chat extraction');
+            console.log('Received initial response:', response);
+            
+            if (response.status !== 'extracting') {
+                throw new Error('Failed to start chat extraction');
+            }
+        } catch (error) {
+            console.error('Error sending message to content script:', error);
+            // If the content script is not responding, it might not be loaded yet
+            // This can happen if the user navigates to a page after the extension is loaded
+            showNotification('AI Chat Recorder', 'Please refresh the page and try again.');
         }
 
     } catch (error) {
