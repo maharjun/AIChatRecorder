@@ -5,7 +5,7 @@ function createContextMenu() {
         title: 'Save AI Chat',
         contexts: ['page'],
         documentUrlPatterns: [
-            'https://chat.openai.com/*',
+            'https://chatgpt.com/*',
             'https://claude.ai/*'
         ]
     });

@@ -35,7 +35,7 @@
   "content_scripts": [
     {
       "matches": [
-        "https://chat.openai.com/*",
+        "https://chatgpt.com/*",
         "https://claude.ai/*",
         "https://bard.google.com/*",
         "https://poe.com/*"

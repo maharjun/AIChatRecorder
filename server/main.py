@@ -166,13 +166,6 @@ async def save_chat(chat_data: ChatData):
     try:
         logger.info(f"Received chat save request - Platform: {chat_data.platform}, Messages: {len(chat_data.messages)}")
         
-        logger.info(f"Saved chat messages:")
-        for msg in chat_data.messages:
-            logger.info(f"Message textAttachments length: {len(msg.textAttachments)}")
-        json_dict = json.loads(chat_data.model_dump_json())
-        for msg in json_dict["messages"]:
-            logger.info(f"Message textAttachments length in json_dict: {len(msg['textAttachments'])}")
-        
         # Save to database
         async with async_session() as session:
             chat = Chat(

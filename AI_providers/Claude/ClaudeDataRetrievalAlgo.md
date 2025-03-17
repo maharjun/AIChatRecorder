@@ -7,8 +7,8 @@ This document provides a detailed explanation of the algorithm used to extract c
 The Claude Data Retriever is designed to extract complete conversation history from the Claude web interface, including:
 - User messages
 - Claude's responses
-- Code blocks with language detection
 - Image attachments
+- Text attachments
 - Timestamps
 
 The algorithm uses DOM manipulation and clipboard operations to extract content that might not be directly accessible through simple DOM queries.
@@ -21,7 +21,7 @@ Before the retrieval process begins, the system detects which AI platform is bei
 
 ```javascript
 static detectPlatform() {
-    if (window.location.hostname === 'chat.openai.com') {
+    if (window.location.hostname === 'chatgpt.com') {
         return 'openai';
     } else if (window.location.hostname === 'claude.ai') {
         return 'claude';
@@ -296,6 +296,78 @@ The final output of the algorithm is a structured JSON object:
   "capturedAt": "2023-06-15T12:40:00.000Z"
 }
 ```
+
+## Database Storage
+
+After extraction, the chat data is stored in a SQLite database with the following schema:
+
+```sql
+CREATE TABLE chats (
+    id INTEGER NOT NULL, 
+    platform VARCHAR, 
+    title VARCHAR, 
+    url VARCHAR, 
+    captured_at DATETIME, 
+    messages JSON, 
+    PRIMARY KEY (id)
+);
+```
+
+### Data Storage Format
+
+1. **Top-level Chat Record**:
+   - `id`: Integer primary key
+   - `platform`: String identifying the AI platform (e.g., "claude")
+   - `title`: String containing the chat title
+   - `url`: String with the original URL of the chat
+   - `captured_at`: DateTime when the chat was captured
+   - `messages`: JSON array containing all messages in the conversation
+
+2. **Message Structure** (stored as JSON in the `messages` column):
+   Each message is a JSON object with the following structure:
+   ```json
+   {
+     "role": "user" or "assistant",
+     "content": "The text content of the message",
+     "images": [], // Array of image attachments
+     "textAttachments": [], // Array of text attachments
+     "codeBlocks": [], // Array of code blocks (if any)
+     "timestamp": "ISO timestamp of when the message was sent"
+   }
+   ```
+
+3. **Image Attachments**:
+   When images are included, they are saved to the `server/data/images/` directory with UUID filenames and referenced in the `images` array with objects like:
+   ```json
+   {
+     "type": "image",
+     "originalSrc": "original image URL",
+     "originalFilename": "original filename",
+     "alt": "alt text or description",
+     "savedPath": "/files/images/uuid-filename.png"
+   }
+   ```
+
+4. **Text Attachments**:
+   Text attachments (like code blocks or file contents) are saved to the `server/data/text/` directory with UUID filenames and referenced in the `textAttachments` array with objects like:
+   ```json
+   {
+     "type": "text",
+     "title": "title or description",
+     "content": "text content (may be stored in the file)",
+     "originalFilename": "original filename",
+     "savedPath": "/files/text/uuid-filename.txt"
+   }
+   ```
+
+### Data Flow
+
+1. The Chrome extension extracts chat data from the Claude interface using DOM manipulation.
+2. Images and text attachments are uploaded to the server and saved to their respective directories.
+3. The complete chat data, including references to saved files, is stored in the database as a JSON structure.
+4. The server provides APIs to retrieve, list, and delete chats and their associated files.
+
+This storage approach allows for efficient retrieval and display of complex chat data, including multimedia content, while maintaining the relationships between messages and their attachments.
 
 ## Conclusion
 

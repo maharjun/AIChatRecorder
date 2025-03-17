@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Get the active tab
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
             
-            if (!tab.url.includes('chat.openai.com') && !tab.url.includes('claude.ai')) {
+            if (!tab.url.includes('chatgpt.com') && !tab.url.includes('claude.ai')) {
                 showStatus('Please navigate to an OpenAI or Claude chat page', true);
                 return;
             }

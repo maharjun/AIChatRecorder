@@ -20,7 +20,7 @@ class AIDataRetriever {
      * @returns {string|null} The platform name or null if not recognized
      */
     static detectPlatform() {
-        if (window.location.hostname === 'chat.openai.com') {
+        if (window.location.hostname === 'chatgpt.com') {
             return 'openai';
         } else if (window.location.hostname === 'claude.ai') {
             return 'claude';
