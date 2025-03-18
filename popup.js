@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 clearTimeout(timeoutId);
                 
                 if (response.ok) {
-                    serverStatusDiv.textContent = 'Server: Running ✓';
+                    serverStatusDiv.textContent = 'Server: Running \u2713';
                     serverStatusDiv.style.backgroundColor = '#e6f7e6';
                     serverStatusDiv.style.color = '#2e7d32';
                     saveButton.disabled = false;
@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw fetchError;
             }
         } catch (error) {
-            serverStatusDiv.textContent = 'Server: Not Running ✗';
+            serverStatusDiv.textContent = 'Server: Not Running \u2717';
             serverStatusDiv.style.backgroundColor = '#fde9e9';
             serverStatusDiv.style.color = '#c62828';
             saveButton.disabled = true;

@@ -182,7 +182,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             // Add text icon
                             const textIcon = win.document.createElement('div');
                             textIcon.className = 'text-icon';
-                            textIcon.innerHTML = '📄';
+                            textIcon.innerHTML = '\uD83D\uDCC4';  // Unicode for document/page emoji
                             textThumbnail.appendChild(textIcon);
                             
                             // Add filename
