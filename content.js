@@ -24,7 +24,7 @@ async function extractChatData() {
         const dataRetriever = await AIDataRetriever.createRetriever(SERVER_URL);
         return await dataRetriever.extractChatData();
     } catch (error) {
-        console.error('Error creating data retriever:', error);
+        console.error('Error extracting chat data:', error);
         return null;
     }
 }
@@ -78,6 +78,28 @@ window.addEventListener('message', (event) => {
                         type: 'AI_CHAT_RECORDER_RESULT',
                         error: error.message
                     }, '*');
+                    
+                    // Show error as overlay
+                    const errorOverlay = document.createElement('div');
+                    errorOverlay.style.position = 'fixed';
+                    errorOverlay.style.top = '20px';
+                    errorOverlay.style.left = '50%';
+                    errorOverlay.style.transform = 'translateX(-50%)';
+                    errorOverlay.style.backgroundColor = 'rgba(200, 0, 0, 0.8)';
+                    errorOverlay.style.color = 'white';
+                    errorOverlay.style.padding = '10px 20px';
+                    errorOverlay.style.borderRadius = '5px';
+                    errorOverlay.style.zIndex = '10000';
+                    errorOverlay.style.whiteSpace = 'pre-wrap';
+                    errorOverlay.textContent = `Error: ${error.message}`;
+                    document.body.appendChild(errorOverlay);
+                    
+                    // Remove error overlay after a delay
+                    setTimeout(() => {
+                        if (document.body.contains(errorOverlay)) {
+                            document.body.removeChild(errorOverlay);
+                        }
+                    }, 3000);
                 });
         };
         

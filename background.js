@@ -20,7 +20,7 @@ chrome.runtime.onInstalled.addListener(() => {
 // Handle context menu clicks
 chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId === 'saveChatContextMenu') {
-        handleSaveChat(tab);
+        checkServerBeforeSaveChat(tab);
     }
 });
 
@@ -44,6 +44,36 @@ async function isTabReady(tab) {
 // Server configuration
 const SERVER_URL = 'http://localhost:8000';
 
+// Check server availability before initiating save
+async function checkServerBeforeSaveChat(tab) {
+    try {
+        // Check if server is running with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        
+        try {
+            const response = await fetch(`${SERVER_URL}/api/chats`, {
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (response.ok) {
+                // Server is running, proceed with save
+                handleSaveChat(tab);
+            } else {
+                throw new Error('Server not responding');
+            }
+        } catch (error) {
+            clearTimeout(timeoutId);
+            throw new Error('Server not running. Please start the Python server first.');
+        }
+    } catch (error) {
+        console.error('Server check failed:', error);
+        showNotification('AI Chat Recorder', error.message);
+    }
+}
+
 // Create notification helper function
 function showNotification(title, message) {
     try {
@@ -58,22 +88,12 @@ function showNotification(title, message) {
     }
 }
 
-// Handle saving chat
+// Handle saving chat from context menu
 async function handleSaveChat(tab) {
     try {
         // Check if we have a valid tab
         if (!tab || !tab.id) {
             throw new Error('No active tab found');
-        }
-
-        // Check if server is running
-        try {
-            const response = await fetch(`${SERVER_URL}/api/chats`);
-            if (!response.ok) {
-                throw new Error('Server not responding');
-            }
-        } catch (error) {
-            throw new Error('Server not running. Please start the Python server first.');
         }
 
         // Check if the tab is ready
@@ -117,15 +137,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({ success: true });
         return true;
     }
-    
-    if (request.action === 'saveChat') {
-        if (!sender.tab) {
-            sendResponse({ error: 'No tab found' });
-            return true;
-        }
-        handleSaveChat(sender.tab);
-        return true;
-    }
 
     if (request.action === 'downloadImage') {
         // Images are now handled by the server during chat save
@@ -153,7 +164,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 },
                 body: JSON.stringify(request.data)
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Server responded with status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(result => {
                 console.log('Chat saved to server:', result);
                 showNotification('AI Chat Recorder', 'Chat saved successfully!');
