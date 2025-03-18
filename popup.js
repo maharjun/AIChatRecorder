@@ -22,23 +22,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Extract chat data from the content script
-            const response = await chrome.tabs.sendMessage(tab.id, { action: 'extractChat' });
-            
-            if (!response) {
-                showStatus('No chat data found', true);
-                return;
-            }
-
-            // Save to chrome storage
-            const timestamp = new Date().toISOString();
-            const key = `chat_${timestamp}`;
-            
-            await chrome.storage.local.set({
-                [key]: response
+            // Send message to background script to handle the saving
+            chrome.runtime.sendMessage({ 
+                action: 'saveChat',
+                tabId: tab.id 
             });
-
-            showStatus('Chat saved successfully!');
+            
+            showStatus('Saving chat...');
         } catch (error) {
             showStatus('Error saving chat: ' + error.message, true);
         }

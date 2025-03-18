@@ -1,37 +1,16 @@
 // Load saved settings when the options page opens
 document.addEventListener('DOMContentLoaded', async () => {
-    const settings = await chrome.storage.sync.get({
-        attachmentsPath: 'attachments',
-        storageType: 'local',
-        jsonStoragePath: 'chats'
-    });
-
-    document.getElementById('attachmentsPath').value = settings.attachmentsPath;
-    document.getElementById('storageType').value = settings.storageType;
-    document.getElementById('jsonStoragePath').value = settings.jsonStoragePath;
-
-    // Show/hide JSON path based on storage type
-    document.getElementById('jsonPathGroup').style.display = 
-        settings.storageType === 'json' ? 'block' : 'none';
-});
-
-// Handle storage type change
-document.getElementById('storageType').addEventListener('change', (e) => {
-    document.getElementById('jsonPathGroup').style.display = 
-        e.target.value === 'json' ? 'block' : 'none';
+    // In the future, settings will be loaded here
+    // For now, we have no settings to load
 });
 
 // Save settings
 document.getElementById('save').addEventListener('click', async () => {
     const status = document.getElementById('status');
-    const settings = {
-        attachmentsPath: document.getElementById('attachmentsPath').value.trim() || 'attachments',
-        storageType: document.getElementById('storageType').value,
-        jsonStoragePath: document.getElementById('jsonStoragePath').value.trim() || 'chats'
-    };
-
+    
     try {
-        await chrome.storage.sync.set(settings);
+        // In the future, settings will be saved here
+        // For now, we have no settings to save
         
         status.textContent = 'Settings saved successfully!';
         status.className = 'status success';
